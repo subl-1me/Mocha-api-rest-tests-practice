@@ -1,37 +1,64 @@
-const MOCK_URL = process.env.MOCK_URL;
-const https = require('https');
+const UserService = require('../services/user.service');
 
-const items = async function(_, res){
+const users = async function(_, res){
     try{
-        const requestResponse = await getRequest();
+        const serviceRes = await UserService.items();
         return res.status(200).send({
-            data: JSON.parse(requestResponse)
+            users: serviceRes
         })
     }catch(err){
         return res.status(500).send(err);
     }
 }
 
-const getRequest = function(){
-    return new Promise((resolve, _) => {
-        https.get(MOCK_URL, (res) => {
-            let data = '';
-            res.on('data', (chunck) => {
-                data += chunck;
-            })
+const create = async function(req, res){
+    const { username, email } = req.body;
 
-            res.on('end', () => {
-                console.log('Data has been obtained successfully.');
-                resolve(data);
-            })
-
-            res.on('error', (err) => {
-                throw new Error(err);
-            })
+    if(!username || !email) {
+        return res.status(200).send({
+            errorCode: 100,
+            message: 'All params are required.',
+            bodyRecieved: { username, email },
+            bodyRequired: 'email & username'
         })
-    })
+    }
+
+    try{
+        const serviceRes = await UserService.insert({username, email});
+        return res.status(200).send({
+            user: serviceRes
+        })
+    }catch(err){
+        console.log(err);
+        return res.status(500).send(err);
+    }
+}
+
+const getById = async function(req, res){   
+    const idParam = req.params.id;
+    if(!idParam || idParam === 'undefined'){
+        return res.status(200).send({ 
+            errorCode: 201,
+            message: 'User ID is required'
+        });
+    }
+
+    const serviceRes = await UserService.getById(idParam);
+    return res.status(200).send(serviceRes)
+    // try{
+    //     const serviceRes = await UserService.getById(id);
+    //     return res.status(200).send({
+    //         user: serviceRes
+    //     })
+    // }catch(err){
+    //     return res.status(500).send({
+    //         message: 'Something went wrong.'
+    //     })
+    // }
 }
 
 module.exports = {
-    items
+    users,
+    create,
+    getById
 }
